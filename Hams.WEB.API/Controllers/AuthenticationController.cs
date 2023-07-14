@@ -6,6 +6,7 @@ using Mail.Service.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -21,13 +22,15 @@ namespace Hams.WEB.API.Controllers
         private readonly UserManager<IdentityUser> _userManager;
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
+        private readonly ApplicationDbContext _context;
 
-        public AuthenticationController(RoleManager<IdentityRole> roleManager, UserManager<IdentityUser> userManager, IConfiguration configuration, IEmailService emailService)
+        public AuthenticationController(RoleManager<IdentityRole> roleManager, UserManager<IdentityUser> userManager, IConfiguration configuration, IEmailService emailService, ApplicationDbContext context)
         {
             _roleManager = roleManager;
             _userManager = userManager;
             _configuration = configuration;
             _emailService = emailService;
+            _context = context;
         }
 
         [HttpPost]
@@ -58,12 +61,21 @@ namespace Hams.WEB.API.Controllers
 
             await _userManager.AddToRoleAsync(newUser,"Huesped");
 
+            Guest guest = new Guest();
+            guest.Names = user.Names;
+            guest.LastNames = user.LastNames;
+            guest.PhoneNumber = user.PhoneNumber;
+            guest.UserID = newUser.Id;
+
+
+            _context.Guests.Add(guest);
+            await _context.SaveChangesAsync();
+
             //Add Toke to verify the email...
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(newUser);
             var confirmationLink = Url.Action(nameof(ConfirmEmail), "Authentication", new { token, email = newUser.Email }, Request.Scheme);
             var message = new Message(new string[] { user.Email! }, "Confirmation Email Link", confirmationLink!);
             _emailService.SendEmail(message);
-
 
 
             return StatusCode(StatusCodes.Status201Created,
@@ -110,8 +122,13 @@ namespace Hams.WEB.API.Controllers
 
                 var jwtToken = GetToken(authClaims);
 
+                var userInfo = await _context.Guests.FirstOrDefaultAsync(x => x.UserID == user.Id);
+
                 return Ok(new 
                 {
+                    names = userInfo.Names,
+                    lastnames = userInfo.LastNames,
+                    phoneNumber = userInfo.PhoneNumber,
                     token = new JwtSecurityTokenHandler().WriteToken(jwtToken),
                     expiration = jwtToken.ValidTo
                 });
