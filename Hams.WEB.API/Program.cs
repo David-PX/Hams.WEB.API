@@ -21,7 +21,7 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>()
 
 builder.Services.AddCors(options => {
     options.AddPolicy("MyPolicy", builder => {
-        builder.WithOrigins("http://localhost:3000", "http://www.contoso.com");
+        builder.WithOrigins("http://localhost:3000", "http://localhost:4200");
         builder.AllowAnyMethod();
         builder.AllowAnyHeader();
     });

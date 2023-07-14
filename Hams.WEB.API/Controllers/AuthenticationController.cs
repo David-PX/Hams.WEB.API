@@ -126,6 +126,7 @@ namespace Hams.WEB.API.Controllers
 
                 return Ok(new 
                 {
+                    id = userInfo.ID,
                     names = userInfo.Names,
                     lastnames = userInfo.LastNames,
                     phoneNumber = userInfo.PhoneNumber,
