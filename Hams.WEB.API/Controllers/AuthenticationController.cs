@@ -1,4 +1,5 @@
-﻿using Hams.WEB.API.Models;
+﻿using Hams.WEB.API.DTOs;
+using Hams.WEB.API.Models;
 using Hams.WEB.API.Models.Authentication.Login;
 using Hams.WEB.API.Models.Authentication.SignUp;
 using Mail.Service.Models;
@@ -135,6 +136,53 @@ namespace Hams.WEB.API.Controllers
                 });
             }
             return Unauthorized();
+        }
+
+
+        [HttpPost("resetpassword/{id}")]
+        public async Task<IActionResult> ChangePassword(ResetPasswordDTO dto)
+        {
+            // Validate the input.
+            if (dto.UserId == null || dto.UserId == 0)
+            {
+                return BadRequest("UserId is required.");
+            }
+
+            if (string.IsNullOrEmpty(dto.oldPassword))
+            {
+                return BadRequest("Old password is required.");
+            }
+
+            if (string.IsNullOrEmpty(dto.newPassword))
+            {
+                return BadRequest("New password is required.");
+            }
+
+            if (string.IsNullOrEmpty(dto.confirmPassword))
+            {
+                return BadRequest("Confirm password is required.");
+            }
+
+            if (dto.newPassword != dto.confirmPassword)
+            {
+                return BadRequest("New password and confirm password do not match.");
+            }
+
+            var guest = await _context.Guests.FindAsync(dto.UserId);
+            // Get the user.
+            var user = await _userManager.FindByIdAsync(guest.UserID);
+
+            // Validate the old password.
+            if (!await _userManager.CheckPasswordAsync(user, dto.oldPassword);
+            {
+                return BadRequest("Old password is incorrect.");
+            }
+
+            // Change the password.
+            await _userManager.ChangePasswordAsync(user, dto.oldPassword, dto.newPassword);
+
+            // Return success.
+            return Ok();
         }
 
         private JwtSecurityToken GetToken(List<Claim> authClaim)
